@@ -10,7 +10,6 @@
     <link rel="manifest" href="manifest.json">
     
     <!-- iOS Meta Tags -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Pitch Marker">
     
@@ -540,12 +539,6 @@
             white-space: nowrap;
         }
         
-        /* Override standalone button styles when in grid */
-        .quick-actions .quick-action-btn {
-            width: auto;
-            padding: 10px 5px;
-        }
-        
         .quick-action-btn:active {
             transform: scale(0.95);
         }
@@ -675,6 +668,15 @@
         
         .danger-btn:active {
             background: #da190b;
+        }
+        
+        .begin-btn {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .begin-btn:active {
+            background: #45a049;
         }
         
         .action-btn:disabled {
@@ -1142,7 +1144,7 @@
                     💾 Save
                 </button>
                 
-                <button id="begin-marking-btn" class="quick-action-btn primary-btn">
+                <button id="begin-marking-btn" class="quick-action-btn begin-btn">
                     📍 Begin
                 </button>
             </div>
