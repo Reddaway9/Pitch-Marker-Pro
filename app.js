@@ -1391,7 +1391,40 @@ function initNavigation() {
     updateNavigationUI();
     startNavigationTracking();
     updateMarkingPitchSelector(); // Populate pitch selector
-    
+
+    // ── Device Orientation Compass ──
+    // Use phone's real compass bearing rather than just movement heading.
+    // iOS 13+ requires permission; Android works directly.
+    function startDeviceOrientation() {
+        window.addEventListener('deviceorientationabsolute', onOrientation, true);
+        window.addEventListener('deviceorientation', onOrientation, true);
+    }
+    function onOrientation(e) {
+        // webkitCompassHeading is iOS; alpha (from North when absolute) for Android
+        if (e.webkitCompassHeading !== undefined) {
+            window.deviceCompassHeading = e.webkitCompassHeading;
+        } else if (e.absolute && e.alpha !== null) {
+            window.deviceCompassHeading = (360 - e.alpha) % 360;
+        }
+    }
+    if (typeof DeviceOrientationEvent !== 'undefined' &&
+        typeof DeviceOrientationEvent.requestPermission === 'function') {
+        // iOS 13+ - we request permission on first tap of the compass
+        const compass = document.getElementById('compass');
+        if (compass && !compass._iosPermissionBound) {
+            compass._iosPermissionBound = true;
+            compass.title = 'Tap to enable compass';
+            compass.style.cursor = 'pointer';
+            compass.addEventListener('click', () => {
+                DeviceOrientationEvent.requestPermission().then(state => {
+                    if (state === 'granted') startDeviceOrientation();
+                }).catch(console.error);
+            }, { once: true });
+        }
+    } else {
+        startDeviceOrientation();
+    }
+
     document.getElementById('exit-navigation').addEventListener('click', () => {
         if (confirm('Exit marking? Progress will be lost.')) {
             navigator.geolocation.clearWatch(watchId);
@@ -1683,10 +1716,12 @@ function updateNavigationUI() {
     document.getElementById('distance').textContent = distance.toFixed(1);
     document.getElementById('nav-accuracy').textContent = currentLocation.accuracy.toFixed(1);
     
-    // Update compass arrow
+    // Update compass arrow — prefer deviceCompassHeading if available (set by deviceorientation listener)
     const arrow = document.getElementById('compass-arrow');
-    const heading = currentLocation.heading || 0;
-    const relativeBearing = bearing - heading;
+    const heading = window.deviceCompassHeading !== undefined
+        ? window.deviceCompassHeading
+        : (currentLocation.heading || 0);
+    const relativeBearing = (bearing - heading + 360) % 360;
     arrow.style.transform = `rotate(${relativeBearing}deg)`;
     
     // Enable/disable mark button based on distance and accuracy
@@ -1700,8 +1735,97 @@ function updateNavigationUI() {
     } else {
         markBtn.disabled = true;
         document.getElementById('waypoint-instruction').textContent = 
-            `Walk towards the arrow until distance is less than ${threshold.toFixed(1)}m`;
+            `Walk ${distance.toFixed(1)}m in the arrow direction`;
     }
+    
+    // ── GPS POSITION OVERLAY ON PITCH DIAGRAM ──
+    updateUserPositionOnDiagram();
+}
+
+/**
+ * Projects the user's real GPS position onto the SVG pitch diagram.
+ * The SVG pitch spans x:20-200 (width 180) and y:20-140 (height 120).
+ * Pitch center in SVG is (110, 80).
+ * We use the pitch center coords + rotation to do the projection.
+ */
+function updateUserPositionOnDiagram() {
+    const group = document.getElementById('user-position-group');
+    const dot   = document.getElementById('user-pos-dot');
+    const pulse = document.getElementById('user-pulse-ring');
+    const ring  = document.getElementById('user-accuracy-ring');
+    const badge = document.getElementById('off-pitch-badge');
+    const headLine = document.getElementById('user-heading-line');
+    if (!group || !currentLocation || !pitchCorners || !currentPitchConfig) return;
+
+    // SVG pitch dimensions (in SVG units)
+    const SVG_CX = 110, SVG_CY = 80;   // centre of pitch in SVG coords
+    const SVG_HALF_LEN = 90;            // half pitch length in SVG units (20→200 = 180 total)
+    const SVG_HALF_WID = 60;            // half pitch width in SVG units (20→140 = 120 total)
+
+    // Real pitch dimensions in metres
+    const YARDS_TO_M = 0.9144;
+    const halfLenM = (currentPitchConfig.length * YARDS_TO_M) / 2;
+    const halfWidM = (currentPitchConfig.width  * YARDS_TO_M) / 2;
+
+    // Vector from pitch centre to user, in metres (east = +x, north = +y)
+    const centerLat = currentPitchCenter ? currentPitchCenter[1] : pitchCorners[0][1];
+    const centerLng = currentPitchCenter ? currentPitchCenter[0] : pitchCorners[0][0];
+    const dxM = (currentLocation.lng - centerLng) * 111320 * Math.cos(centerLat * Math.PI / 180);
+    const dyM = (currentLocation.lat - centerLat) * 111320;
+
+    // Rotate into pitch-local axes (pitch is rotated clockwise by `currentRotation` degrees)
+    const rotRad = (currentRotation * Math.PI) / 180;
+    const localX =  dxM * Math.cos(rotRad) + dyM * Math.sin(rotRad);  // along pitch length
+    const localY = -dxM * Math.sin(rotRad) + dyM * Math.cos(rotRad);  // along pitch width
+
+    // Scale to SVG space
+    let svgX = SVG_CX + (localX / halfLenM) * SVG_HALF_LEN;
+    let svgY = SVG_CY - (localY / halfWidM) * SVG_HALF_WID;  // SVG y inverts north
+
+    // Check if user is within (or close to) the pitch
+    const PADDING = 1.5; // allow slightly outside pitch
+    const isOnPitch = Math.abs(localX) <= halfLenM * PADDING &&
+                      Math.abs(localY) <= halfWidM * PADDING;
+
+    if (!isOnPitch) {
+        // Clamp dot to pitch edge so it's visible but badge shows
+        svgX = Math.max(20, Math.min(200, svgX));
+        svgY = Math.max(20, Math.min(140, svgY));
+        if (badge) badge.style.display = 'inline';
+    } else {
+        if (badge) badge.style.display = 'none';
+    }
+
+    // Move all elements of the group
+    [dot, pulse, ring].forEach(el => {
+        if (el) {
+            el.setAttribute('cx', svgX.toFixed(2));
+            el.setAttribute('cy', svgY.toFixed(2));
+        }
+    });
+
+    // Accuracy ring radius — map GPS accuracy metres to SVG units
+    // 1 metre ≈ SVG_HALF_LEN / halfLenM SVG units
+    const metresPerSvgUnit = halfLenM / SVG_HALF_LEN;
+    const accuracyR = Math.min(30, (currentLocation.accuracy / metresPerSvgUnit));
+    if (ring) ring.setAttribute('r', Math.max(6, accuracyR).toFixed(1));
+
+    // Heading indicator line (points in direction of travel)
+    const h = window.deviceCompassHeading !== undefined
+        ? window.deviceCompassHeading
+        : (currentLocation.heading || 0);
+    // Rotate pitch-local to map the heading onto the SVG axes
+    const hRad = ((h - currentRotation) * Math.PI) / 180;
+    const lineLen = 8;
+    if (headLine) {
+        headLine.setAttribute('x1', svgX.toFixed(2));
+        headLine.setAttribute('y1', svgY.toFixed(2));
+        headLine.setAttribute('x2', (svgX + lineLen * Math.sin(hRad)).toFixed(2));
+        headLine.setAttribute('y2', (svgY - lineLen * Math.cos(hRad)).toFixed(2));
+    }
+
+    // Show the group
+    group.style.display = '';
 }
 
 function calculateDistance(lat1, lon1, lat2, lon2) {
