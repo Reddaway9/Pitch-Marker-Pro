@@ -832,163 +832,171 @@
             cursor: pointer;
         }
         
-        .compass-container {
+        /* ── GPS OVERLAY PANEL (bottom of navigation screen) ── */
+        .nav-bottom-panel {
+            flex-shrink: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            padding: 12px 16px;
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            flex-shrink: 0;
+            gap: 10px;
         }
-        
+
+        /* Direction + Distance row */
+        .nav-guidance-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Compact compass */
         #compass {
-            width: 200px;
-            height: 200px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 4px solid rgba(255, 255, 255, 0.3);
+            width: 72px;
+            height: 72px;
+            flex-shrink: 0;
+            background: rgba(255,255,255,0.08);
+            border: 2.5px solid rgba(255,255,255,0.25);
             border-radius: 50%;
             display: flex;
             justify-content: center;
             align-items: center;
-            margin-bottom: 30px;
             position: relative;
-            transition: transform 0.3s ease;
         }
-        
         #compass::before {
             content: 'N';
             position: absolute;
-            top: 10px;
-            font-size: 1.2em;
+            top: 4px;
+            font-size: 0.65em;
             font-weight: bold;
-            opacity: 0.5;
+            opacity: 0.45;
         }
-        
         #compass-arrow {
-            font-size: 4em;
+            font-size: 2em;
             color: #4CAF50;
             transform-origin: center;
-            transition: transform 0.3s ease;
+            transition: transform 0.25s ease;
+            line-height: 1;
         }
-        
-        #distance-display {
+
+        /* Distance + accuracy block */
+        .nav-distance-block {
+            flex: 1;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            gap: 5px;
+            gap: 2px;
         }
-        
+        #distance-display {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+        }
         #distance {
-            font-size: 3em;
+            font-size: 2.4em;
             font-weight: bold;
             color: #4CAF50;
+            line-height: 1;
         }
-        
         .unit {
-            font-size: 1em;
+            font-size: 0.95em;
             opacity: 0.7;
         }
-        
         .accuracy-display {
-            text-align: center;
-            padding: 10px;
-            background: rgba(0, 0, 0, 0.3);
-            font-size: 0.9em;
+            font-size: 0.8em;
+            opacity: 0.6;
         }
-        
-        .waypoint-info {
-            padding: 20px;
-            text-align: center;
-        }
-        
         #waypoint-instruction {
+            font-size: 0.85em;
             opacity: 0.8;
-            line-height: 1.5;
+            line-height: 1.4;
+            margin: 0;
         }
-        
+
+        /* Mark button */
         .mark-btn {
-            margin: 0 20px 20px;
-            padding: 20px;
+            width: 100%;
+            padding: 14px;
             background: #4CAF50;
             border: none;
-            border-radius: 12px;
+            border-radius: 10px;
             color: white;
-            font-size: 1.2em;
+            font-size: 1.1em;
             font-weight: bold;
             cursor: pointer;
+            transition: background 0.2s;
         }
-        
         .mark-btn:disabled {
-            background: rgba(76, 175, 80, 0.3);
+            background: rgba(76, 175, 80, 0.25);
             cursor: not-allowed;
         }
-        
-        .mark-btn:not(:disabled):active {
-            background: #45a049;
-        }
-        
+        .mark-btn:not(:disabled):active { background: #45a049; }
+
+        /* Waypoint list (scrollable, smaller) */
         .waypoint-list {
             background: rgba(0, 0, 0, 0.3);
-            padding: 20px;
-            margin: 0 20px 20px;
-            border-radius: 12px;
-            max-height: 300px;
+            padding: 12px 16px;
+            margin: 0 10px 10px;
+            border-radius: 10px;
+            max-height: 180px;
             overflow-y: auto;
+            flex-shrink: 0;
         }
-        
         .waypoint-list h3 {
-            margin-bottom: 15px;
-            font-size: 1.1em;
-        }
-        
-        #waypoint-checklist {
-            list-style: none;
-        }
-        
-        #waypoint-checklist li {
-            padding: 10px;
             margin-bottom: 8px;
-            background: rgba(255, 255, 255, 0.05);
+            font-size: 0.95em;
+            opacity: 0.7;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        #waypoint-checklist { list-style: none; }
+        #waypoint-checklist li {
+            padding: 8px 10px;
+            margin-bottom: 5px;
+            background: rgba(255,255,255,0.05);
             border-radius: 6px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             cursor: pointer;
+            font-size: 0.88em;
             transition: background 0.2s;
         }
-        
-        #waypoint-checklist li:hover:not(.completed) {
-            background: rgba(255, 255, 255, 0.1);
+        #waypoint-checklist li:hover:not(.completed) { background: rgba(255,255,255,0.1); }
+        #waypoint-checklist li.completed { opacity: 0.5; text-decoration: line-through; }
+        #waypoint-checklist li.current { background: rgba(76,175,80,0.2); border: 1px solid #4CAF50; }
+        #waypoint-checklist li .status { font-size: 1.1em; }
+
+        /* ── USER POSITION DOT ON SVG DIAGRAM ── */
+        @keyframes pulseUserDot {
+            0%   { r: 5; opacity: 1; }
+            70%  { r: 9; opacity: 0.3; }
+            100% { r: 5; opacity: 1; }
         }
-        
-        #waypoint-checklist li.completed {
-            opacity: 0.6;
-            text-decoration: line-through;
+        @keyframes pulseTargetDot {
+            0%   { opacity: 1; }
+            50%  { opacity: 0.4; }
+            100% { opacity: 1; }
         }
-        
-        #waypoint-checklist li.current {
-            background: rgba(76, 175, 80, 0.2);
-            border: 1px solid #4CAF50;
+        .user-pos-pulse {
+            animation: pulseUserDot 1.5s ease-out infinite;
         }
-        
-        #waypoint-checklist li .status {
-            font-size: 1.2em;
+        .target-waypoint-pulse {
+            animation: pulseTargetDot 1s ease-in-out infinite;
         }
-        
-        @media (max-width: 400px) {
-            #compass {
-                width: 160px;
-                height: 160px;
-            }
-            
-            #compass-arrow {
-                font-size: 3em;
-            }
-            
-            #distance {
-                font-size: 2.5em;
-            }
+
+        /* Off-pitch indicator badge */
+        #off-pitch-badge {
+            display: none;
+            position: absolute;
+            top: 8px; right: 8px;
+            background: rgba(255,152,0,0.85);
+            color: white;
+            font-size: 0.7em;
+            font-weight: bold;
+            padding: 3px 8px;
+            border-radius: 10px;
         }
+        .pitch-diagram-container { position: relative; }
     </style>
 </head>
 <body>
@@ -1257,38 +1265,48 @@
                 
                 <!-- Waypoint circles will be added by JavaScript -->
                 <g id="waypoint-markers"></g>
+                <!-- User GPS position on pitch (updated by JS) -->
+                <g id="user-position-group" style="display:none">
+                    <circle id="user-accuracy-ring" cx="110" cy="80" r="8"
+                            fill="rgba(33,150,243,0.12)" stroke="rgba(33,150,243,0.4)"
+                            stroke-width="1" stroke-dasharray="3,2"/>
+                    <circle id="user-pulse-ring" cx="110" cy="80" r="5"
+                            fill="none" stroke="rgba(33,150,243,0.5)" stroke-width="1.5"
+                            class="user-pos-pulse"/>
+                    <circle id="user-pos-dot" cx="110" cy="80" r="4"
+                            fill="#2196F3" stroke="white" stroke-width="1.5"/>
+                    <line id="user-heading-line" x1="110" y1="80" x2="110" y2="73"
+                          stroke="white" stroke-width="1" stroke-linecap="round" opacity="0.7"/>
+                </g>
             </svg>
-            <p class="diagram-label">Tap a point to navigate there</p>
+            <span id="off-pitch-badge" style="display:none; position:absolute; top:8px; right:8px; background:rgba(255,152,0,0.85); color:white; font-size:0.7em; font-weight:bold; padding:3px 8px; border-radius:10px;">📍 Off Pitch</span>
+            <p class="diagram-label">🔵 You · Tap a point to navigate there</p>
         </div>
-        
-        <div class="compass-container">
-            <div id="compass">
-                <div id="compass-arrow">↑</div>
+
+        <!-- Compact bottom guidance panel -->
+        <div class="nav-bottom-panel">
+            <div class="nav-guidance-row">
+                <div id="compass">
+                    <div id="compass-arrow">↑</div>
+                </div>
+                <div class="nav-distance-block">
+                    <div id="distance-display">
+                        <span id="distance">--</span>
+                        <span class="unit">m</span>
+                    </div>
+                    <div class="accuracy-display">GPS ±<span id="nav-accuracy">--</span>m</div>
+                    <p id="waypoint-instruction">Acquiring GPS…</p>
+                </div>
             </div>
-            <div id="distance-display">
-                <span id="distance">--</span>
-                <span class="unit">meters</span>
-            </div>
+            <button id="mark-point" class="mark-btn" disabled>✓ Mark This Point</button>
         </div>
-        
-        <div class="accuracy-display">
-            GPS Accuracy: <span id="nav-accuracy">--</span>m
-        </div>
-        
-        <div class="waypoint-info">
-            <p id="waypoint-instruction">Walk towards the arrow until distance is less than 2m</p>
-        </div>
-        
-        <button id="mark-point" class="mark-btn" disabled>
-            ✓ Mark This Point
-        </button>
-        
+
         <div class="waypoint-list">
             <h3>Marking Progress</h3>
             <ul id="waypoint-checklist"></ul>
         </div>
-        
-        <button id="finish-marking" class="secondary-btn" style="display: none;">
+
+        <button id="finish-marking" class="secondary-btn" style="display: none; margin: 0 10px 16px;">
             🏁 Finish & Save Pitch
         </button>
     </div>
